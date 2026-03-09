@@ -1,6 +1,6 @@
 # Maintainer: Nandi <nandi@example.com>
 pkgname=single-bin
-pkgver=1.0.3
+pkgver=1.0.4
 pkgrel=1
 pkgdesc="A single-tab Chromium-based browser with extension support."
 arch=('x86_64')

@@ -2,6 +2,7 @@ const { app, BrowserWindow, BrowserView, ipcMain, session } = require('electron'
 const path = require('path');
 const fs = require('fs');
 const { ElectronChromeExtensions } = require('electron-chrome-extensions');
+const ECx = require('electron-chrome-extension');
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
@@ -32,6 +33,18 @@ async function loadExtensions() {
         console.error(`Failed to load extension ${folder}:`, e);
       }
     }
+  }
+}
+
+async function installFromStore(extensionId) {
+  try {
+    console.log(`Installing extension from store: ${extensionId}...`);
+    const extension = await ECx.load(extensionId);
+    console.log(`Successfully installed extension: ${extension.name}`);
+    return true;
+  } catch (err) {
+    console.error('Installation failed:', err);
+    return false;
   }
 }
 
@@ -107,9 +120,16 @@ function createWindow(url = 'https://www.google.com') {
   // Extension support - add the view's webContents to the extension handler
   extensions.addTab(view.webContents, win);
 
-  ipcMain.on('navigate', (event, targetUrl) => {
+  ipcMain.on('navigate', async (event, targetUrl) => {
     const targetWin = BrowserWindow.fromWebContents(event.sender);
     if (targetWin === win) {
+      if (targetUrl.startsWith('/install ')) {
+        const id = targetUrl.replace('/install ', '').trim();
+        await installFromStore(id);
+        // Refresh to show the new extension icons if they don't auto-appear
+        win.webContents.reload();
+        return;
+      }
       isInternalNavigation = true;
       view.webContents.loadURL(targetUrl);
     }
