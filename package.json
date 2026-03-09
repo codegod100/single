@@ -1,10 +1,10 @@
 {
   "name": "single",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A single-tab Chromium-based browser with extension support.",
   "main": "main.js",
   "scripts": {
-    "start": "electron . --no-sandbox",
+    "start": "electron . --no-sandbox --disable-dev-shm-usage",
     "dist": "electron-builder --linux",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
