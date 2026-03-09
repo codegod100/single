@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background-color: #f1f1f1;
+        font-family: sans-serif;
+      }
+      #chrome {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        z-index: 100;
+      }
+      #url-bar {
+        flex: 1;
+        padding: 8px 12px;
+        border-radius: 20px;
+        border: 1px solid #ccc;
+        outline: none;
+        font-size: 14px;
+      }
+      #url-bar:focus {
+        border-color: #4CAF50;
+      }
+      button {
+        background: none;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 18px;
+        margin-right: 10px;
+      }
+      browser-action-list {
+        margin-left: 10px;
+        display: flex;
+        align-items: center;
+      }
+      /* Style the action buttons inside the list */
+      browser-action-list::part(action) {
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        padding: 2px;
+      }
+      browser-action-list::part(action):hover {
+        background-color: #ddd;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chrome">
+      <button id="back">←</button>
+      <button id="forward">→</button>
+      <input type="text" id="url-bar" placeholder="Enter URL or search..." />
+      <browser-action-list></browser-action-list>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>
