@@ -2,7 +2,8 @@ const { app, BrowserWindow, BrowserView, ipcMain, session } = require('electron'
 const path = require('path');
 const fs = require('fs');
 const { ElectronChromeExtensions } = require('electron-chrome-extensions');
-const ECx = require('electron-chrome-extension');
+const fetch = require('node-fetch');
+const AdmZip = require('adm-zip');
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
@@ -38,9 +39,42 @@ async function loadExtensions() {
 
 async function installFromStore(extensionId) {
   try {
-    console.log(`Installing extension from store: ${extensionId}...`);
-    const extension = await ECx.load(extensionId);
-    console.log(`Successfully installed extension: ${extension.name}`);
+    const extensionsPath = path.join(app.getPath('userData'), 'extensions');
+    const targetPath = path.join(extensionsPath, extensionId);
+    
+    if (fs.existsSync(targetPath)) {
+      console.log(`Extension ${extensionId} already installed.`);
+      return true;
+    }
+
+    console.log(`Downloading extension from store: ${extensionId}...`);
+    // Standard Chrome Extension download URL
+    const url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=114.0.5735.198&x=id%3D${extensionId}%26installsource%3Dondemand%26uc`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) throw new Error(`Failed to download: ${response.statusText}`);
+
+    const buffer = await response.buffer();
+    
+    // Find the 'PK' magic number for ZIP start in CRX files
+    const pkIndex = buffer.indexOf(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+    if (pkIndex === -1) throw new Error('Could not find ZIP start in CRX file');
+    
+    const zipBuffer = buffer.slice(pkIndex);
+    const zip = new AdmZip(zipBuffer);
+    
+    fs.mkdirSync(targetPath, { recursive: true });
+    zip.extractAllTo(targetPath, true);
+    
+    console.log(`Successfully installed extension: ${extensionId}`);
+    
+    // Load it into the current session immediately
+    await session.defaultSession.loadExtension(targetPath);
     return true;
   } catch (err) {
     console.error('Installation failed:', err);
