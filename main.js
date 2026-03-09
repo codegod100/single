@@ -98,8 +98,8 @@ function createWindow(url = 'https://www.google.com') {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true, // Need this for injectBrowserAction in some versions
-      contextIsolation: false, // Easier for the custom elements to work
+      nodeIntegration: false,
+      contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
@@ -130,6 +130,17 @@ function createWindow(url = 'https://www.google.com') {
 
   let isInternalNavigation = false;
 
+  const updateUrlBar = () => {
+    const currentUrl = view.webContents.getURL();
+    console.log(`URL updated: ${currentUrl}`);
+    win.webContents.send('url-changed', currentUrl);
+  };
+
+  // Update URL bar on various navigation events
+  view.webContents.on('did-start-navigation', updateUrlBar);
+  view.webContents.on('did-navigate', updateUrlBar);
+  view.webContents.on('did-finish-load', updateUrlBar);
+
   // Open all links in a new window
   view.webContents.setWindowOpenHandler(({ url }) => {
     createWindow(url);
@@ -143,12 +154,6 @@ function createWindow(url = 'https://www.google.com') {
     }
     event.preventDefault();
     createWindow(url);
-  });
-
-  // Update URL bar when navigation occurs
-  view.webContents.on('did-finish-load', () => {
-    console.log(`Loaded ${view.webContents.getURL()}`);
-    win.webContents.send('url-changed', view.webContents.getURL());
   });
 
   // Extension support - add the view's webContents to the extension handler
