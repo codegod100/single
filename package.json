@@ -14,9 +14,7 @@
     "linux": {
       "target": [
         "AppImage",
-        "deb",
-        "rpm",
-        "pacman"
+        "deb"
       ],
       "category": "Network"
     },
@@ -25,7 +23,7 @@
     }
   },
   "keywords": [],
-  "author": "",
+  "author": "Nandi <nandi@example.com>",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
