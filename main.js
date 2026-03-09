@@ -5,7 +5,10 @@ const { ElectronChromeExtensions } = require('electron-chrome-extensions');
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('disable-sandbox');
+  app.commandLine.appendSwitch('disable-setuid-sandbox');
   app.commandLine.appendSwitch('disable-dev-shm-usage');
+  app.commandLine.appendSwitch('no-zygote');
   app.disableHardwareAcceleration();
 }
 
