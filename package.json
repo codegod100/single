@@ -1,6 +1,6 @@
 {
   "name": "single",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A single-tab Chromium-based browser with extension support.",
   "main": "main.js",
   "scripts": {

@@ -15,6 +15,7 @@ if (process.platform === 'linux') {
 }
 
 let extensions;
+const windowViews = new Map();
 
 async function loadExtensions() {
   const extensionsPath = path.join(app.getPath('userData'), 'extensions');
@@ -48,7 +49,6 @@ async function installFromStore(extensionId) {
     }
 
     console.log(`Downloading extension from store: ${extensionId}...`);
-    // Standard Chrome Extension download URL
     const url = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=114.0.5735.198&x=id%3D${extensionId}%26installsource%3Dondemand%26uc`;
     
     const response = await fetch(url, {
@@ -60,8 +60,6 @@ async function installFromStore(extensionId) {
     if (!response.ok) throw new Error(`Failed to download: ${response.statusText}`);
 
     const buffer = await response.buffer();
-    
-    // Find the 'PK' magic number for ZIP start in CRX files
     const pkIndex = buffer.indexOf(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
     if (pkIndex === -1) throw new Error('Could not find ZIP start in CRX file');
     
@@ -72,8 +70,6 @@ async function installFromStore(extensionId) {
     zip.extractAllTo(targetPath, true);
     
     console.log(`Successfully installed extension: ${extensionId}`);
-    
-    // Load it into the current session immediately
     await session.defaultSession.loadExtension(targetPath);
     return true;
   } catch (err) {
@@ -85,8 +81,6 @@ async function installFromStore(extensionId) {
 function createWindow(url = 'https://www.google.com') {
   console.log(`Creating window for ${url}...`);
   
-  // Extension support needs to be initialized before window creation if possible, 
-  // or at least before we add tabs.
   if (!extensions) {
     extensions = new ElectronChromeExtensions({
       license: 'GPL-3.0',
@@ -104,7 +98,6 @@ function createWindow(url = 'https://www.google.com') {
     },
   });
 
-  // Load the "browser chrome" (URL bar, etc.)
   win.loadFile('index.html');
 
   const view = new BrowserView({
@@ -116,8 +109,8 @@ function createWindow(url = 'https://www.google.com') {
   });
 
   win.setBrowserView(view);
+  windowViews.set(win.id, { view, isInternalNavigation: false });
   
-  // Set bounds for the view (below the URL bar)
   const updateBounds = () => {
     const [width, height] = win.getContentSize();
     view.setBounds({ x: 0, y: 50, width, height: height - 50 });
@@ -128,66 +121,74 @@ function createWindow(url = 'https://www.google.com') {
 
   view.webContents.loadURL(url);
 
-  let isInternalNavigation = false;
-
   const updateUrlBar = () => {
+    if (win.isDestroyed()) return;
     const currentUrl = view.webContents.getURL();
-    console.log(`URL updated: ${currentUrl}`);
+    console.log(`URL updated for win ${win.id}: ${currentUrl}`);
     win.webContents.send('url-changed', currentUrl);
   };
 
-  // Update URL bar on various navigation events
   view.webContents.on('did-start-navigation', updateUrlBar);
   view.webContents.on('did-navigate', updateUrlBar);
   view.webContents.on('did-finish-load', updateUrlBar);
 
-  // Open all links in a new window
   view.webContents.setWindowOpenHandler(({ url }) => {
     createWindow(url);
     return { action: 'deny' };
   });
 
   view.webContents.on('will-navigate', (event, url) => {
-    if (isInternalNavigation) {
-      isInternalNavigation = false;
+    const state = windowViews.get(win.id);
+    if (state && state.isInternalNavigation) {
+      state.isInternalNavigation = false;
       return;
     }
     event.preventDefault();
     createWindow(url);
   });
 
-  // Extension support - add the view's webContents to the extension handler
   extensions.addTab(view.webContents, win);
 
-  ipcMain.on('navigate', async (event, targetUrl) => {
-    const targetWin = BrowserWindow.fromWebContents(event.sender);
-    if (targetWin === win) {
-      if (targetUrl.startsWith('/install ')) {
-        const id = targetUrl.replace('/install ', '').trim();
-        await installFromStore(id);
-        // Refresh to show the new extension icons if they don't auto-appear
-        win.webContents.reload();
-        return;
-      }
-      isInternalNavigation = true;
-      view.webContents.loadURL(targetUrl);
-    }
-  });
-
-  ipcMain.on('go-back', (event) => {
-    if (BrowserWindow.fromWebContents(event.sender) === win) {
-      if (view.webContents.canGoBack()) view.webContents.goBack();
-    }
-  });
-
-  ipcMain.on('go-forward', (event) => {
-    if (BrowserWindow.fromWebContents(event.sender) === win) {
-      if (view.webContents.canGoForward()) view.webContents.goForward();
-    }
+  win.on('closed', () => {
+    windowViews.delete(win.id);
   });
 
   return win;
 }
+
+ipcMain.on('navigate', async (event, targetUrl) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  const state = windowViews.get(win.id);
+  if (state) {
+    if (targetUrl.startsWith('/install ')) {
+      const id = targetUrl.replace('/install ', '').trim();
+      await installFromStore(id);
+      state.view.webContents.reload();
+      return;
+    }
+    state.isInternalNavigation = true;
+    state.view.webContents.loadURL(targetUrl);
+  }
+});
+
+ipcMain.on('go-back', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  const state = windowViews.get(win.id);
+  if (state && state.view.webContents.canGoBack()) {
+    state.view.webContents.goBack();
+  }
+});
+
+ipcMain.on('go-forward', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  const state = windowViews.get(win.id);
+  if (state && state.view.webContents.canGoForward()) {
+    state.view.webContents.goForward();
+  }
+});
 
 app.whenReady().then(async () => {
   await loadExtensions();
