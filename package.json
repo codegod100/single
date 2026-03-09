@@ -1,6 +1,6 @@
 {
   "name": "single",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A single-tab Chromium-based browser with extension support.",
   "main": "main.js",
   "scripts": {
@@ -27,7 +27,8 @@
   "type": "commonjs",
   "dependencies": {
     "electron-chrome-extension": "^5.0.0",
-    "electron-chrome-extensions": "^4.9.0"
+    "electron-chrome-extensions": "^4.9.0",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "electron": "^40.8.0",
