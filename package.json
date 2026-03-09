@@ -1,6 +1,6 @@
 {
   "name": "single",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A single-tab Chromium-based browser with extension support.",
   "main": "main.js",
   "scripts": {
@@ -13,8 +13,7 @@
     "productName": "Single",
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "category": "Network"
     },
@@ -26,9 +25,11 @@
   "author": "Nandi <nandi@example.com>",
   "license": "ISC",
   "type": "commonjs",
+  "dependencies": {
+    "electron-chrome-extensions": "^4.9.0"
+  },
   "devDependencies": {
     "electron": "^40.8.0",
-    "electron-builder": "^26.8.1",
-    "electron-chrome-extensions": "^4.9.0"
+    "electron-builder": "^26.8.1"
   }
 }
